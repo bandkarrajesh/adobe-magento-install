@@ -1,0 +1,89 @@
+OS Upgrade
+$ yum -y upgrade
+
+Swap File create
+$ swapon -s
+$ fallocate -l 8G /swapfile
+$ chmod 600 /swapfile
+$ mkswap /swapfile
+$ swapon /swapfile
+$ swapon -s
+
+$ vim /etc/fstab 
+	/swapfile   none    swap    sw    0   0
+
+$ vim /etc/sysctl.conf
+	vm.swappiness=10
+
+$ sysctl -p
+
+Apache install
+$ yum -y install httpd
+$ httpd -v
+
+PHP 7.4
+$ dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+$ rpm -qa | grep epel
+$ dnf install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+$ rpm -qa | grep remi
+$ dnf module list php
+$ dnf module enable php:remi-7.4
+$ dnf install php php-cli php-common
+$ php -v
+
+SSL Installation
+$ dnf install mod_ssl openssl
+$ curl -O https://dl.eff.org/certbot-auto
+$ mv certbot-auto /usr/local/bin
+$ chmod 755 /usr/local/bin/certbot-auto
+$ mkdir /var/www/dailybazaar.tk
+$ echo “<h1>Welcome to Apache HTTP server</h1>” > /var/www/dailybazaar.tk/index.html
+$ vim /etc/httpd/conf.d/dailybazaar.tk.conf
+<VirtualHost *:443>
+  ServerName dailybazaar.tk
+  ServerAlias www.dailybazaar.tk
+  DocumentRoot /var/www/dailybazaar.tk/
+  <Directory /var/www/dailybazaar.tk/>
+  Options Indexes FollowSymLinks MultiViews
+     AllowOverride All
+     Order allow,deny
+     Allow from all
+  </Directory>
+  ErrorLog /var/log/httpd/www.dailybazaar.tk-error.log
+  CustomLog /var/log/httpd/www.dailybazaar.tk-access.log combined
+</VirtualHost>
+
+$ chown -R apache:apache /var/www/dailybazaar.tk
+$ vi /etc/httpd/conf/httpd.conf
+<VirtualHost *:80>
+   ServerName www.yourdomain.com
+   Redirect / https://www.yourdomain.com
+</VirtualHost>
+
+$ systemctl restart httpd
+
+PHP Configuration
+$ yum -y install php-pdo php-mysqlnd php-opcache php-xml php-gd php-devel php-mysql php-intl php-mbstring php-bcmath php-json php-iconv php-soap
+$ php --ini | grep "Loaded Configuration File"
+$ vi /etc/php.ini
+date.timezone = “Asia/Kolkata”
+memory_limit=2G
+$ service httpd restart
+
+Mariadb Installation
+$ yum install mariadb-server
+$ systemctl start mariadb
+$ mysql_secure_installation
+$ mysql -u root -p
+$ create database magento;
+$ create user 'magento'@'localhost' IDENTIFIED BY 'magento';
+$ GRANT ALL ON magento.* TO 'magento'@'localhost';
+$ flush privileges;
+
+Magento Installation Composer
+$ php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+$ php -r "if (hash_file('sha384', 'composer-setup.php') === 'e5325b19b381bfd88ce90a5ddb7823406b2a38cff6bb704b0acc289a09c8128d4a8ce2bbafcd1fcbdc38666422fe2806') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+$ php composer-setup.php
+$ php -r "unlink('composer-setup.php');"
+
+$ php composer.phar create-project --repository-url=https://repo.magento.com/ magento/project-community-edition /var/www/dailybazaar.tk/
